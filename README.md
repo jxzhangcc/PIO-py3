@@ -1,88 +1,85 @@
-# PIO
-Principal Interacting Orbital
+# PIO-py3
+**Principal Interacting Orbital (for python 3)**
 
-Requirement
+## Requirement
 ---
-- Gaussian 09
-- NBO 6.0
-- Python 2.7
-- Numpy 1.14.1
+- Python 3
+- Numpy 1.18.5
+- Gaussian 09 or 16
+- NBO 6.0 or above (recommended but not necessary)
 
-The combination here has been well-tested. Other versions are not guaranteed to work but are welcomed to test.
+This combination has been well tested. Other versions are not guaranteed to work but are welcomed to test.
 
-Tutorial
+## Tutorial
 ---
-1. Run quantum chemistry calculation
-    
-    Optmize the structure and calculate the electronic structure using standard quantum chemistry softwares. Gaussian09 is used for following demonstration.
-    
+The overall workflow of a PIO analysis consists of three parts:
+- Run ordinary quantum chemistry calculation, i.e. computing the electronic structure of a molecule and optimizing its geometry if necessary
+- Perform natural population analysis (NPA)
+- Perform principal interacting orbital (PIO) analysis
+For Gaussian users, there is a built-in NBO 3.0 program, thus an individual NBO program is not necessary for performing PIO analysis. However, NBO 6.0 or above is usually believed to have superior performance compared to NBO 3.0 in terms of NPA charge, especially for transition metal centers, thus is recommended.
+Due to the lack of universal interface to NBO program and visualization tools, incorpration with other programs is not implemented yet.
+
+1. Run Gaussian calculation with NBO analysis
     **Input**
-    - *FILENAME.gjf*
+    *CH4.gjf*
+    ```
+    %chk=CH4.chk
+    #p opt freq b3lyp/6-31G* pop=nboread
     
+    CH4
+    
+    0 1
+     C                 -0.00000000    0.00000000    0.00000000
+     H                  0.00000000    0.00000000    1.07000000
+     H                 -0.00000000   -1.00880567   -0.35666667
+     H                 -0.87365134    0.50440284   -0.35666667
+     H                  0.87365134    0.50440284   -0.35666667
+    
+     $nbo FILENAME=CH4 AONAO=W33 FNAO=W61 DMNAO=W71 SKIPBO $end
+     ```
+    Shown above is a typical Gaussian input file for PIO analysis. The most important keyword is `pop=nboread` along with a separated line in the end of the file `$nbo FILENAME=CH4 AONAO=W33 FNAO=W61 DMNAO=W71 SKIPBO $end` which specifies the keywords for NBO program to save necessary infomation in local storage.
+
     **Output**
-    - *FILENAME.log*
-        ordinary Gaussian output file
-    - *FILENAME.FChk*
-        FormCheck file is required for the current version of PIO analysis, for the purpose of visualizing orbital using GaussView. It can be generated via keyword *formcheck* specified in gjf file, or via running external formchk utility
-    - *FILENAME.47*
-        A FILENAME.47 file can be generated in Gaussian calculations via keyword *pop=nboread* and nbo keyword *$NBO archive $end* specified in gjf file. As the built-in NBO package in Gaussian 09 is NBO3.0, which is a quite old version of NBO package, an external NBO analysis with more recent version is suggested. 
+    - *CH4.chk*
+        Gaussian checkpoint file
+    - *CH4.33*
+        NBO temp file storing NAO coefficients
+    - *CH4.61*
+        NBO temp file storing NAO density matrix
+    - *CH4.71*
+        NBO temp file storing NAO Fock matrix
 
-2. Run an NBO analysis
+     Notes:
+     - `FILENAME=CH4` specifies the filename of 33/61/71 files, otherwise the default filenames are FILE.33, etc.
+     - Fock matrix is not always available from Gaussian depending on different calculation objectives, in which case the subsequent procedure should still work except that PIO energies are no longer available in the final output.
+     - For users who own and prefer to use NBO 6.0 or newer versions, `pop=nbo6read` can be used to call NBO 6.0 program. Alternatively one might use the NBO keyword `archive` to generate a `FILE.47` file and run external NBO program separately. In the latter case, be reminded to add `AONAO=W33 FNAO=W61 DMNAO=W71 SKIPBO` in the NBO keyword line of the 47 file.
 
-    Run a NBO analysis on the system of interest. The test result is done by an external NBO package. Usage of NBO 3.0 (which is built-in in Gaussian 09) is not recommended but is allowed as long as proper NBO keywords are specified in the gaussian input file (in this case no .nbo file will be generated but a .49 file will still be generated for this PIO code to read).
-    
-    **Input**
-    - *FILENAME.47*
-        NBO input file, can be generated via running an internal NBO analysis in Gaussian
-    
-    The following NBO keywords should be specified in the NBO analysis:
-    
-        $NBO AONAO=W49 FNAO=W49 DMNAO=W49 SKIPBO $END
-   
-    **Running the NBO analysis**         
-    Run the NBO analysis using the following command (replace FILENAME with your own file name, and note .47 should not be included):
-    
-        gennbo FILENAME
-    
-    **Output**
-    - *FILENAME.nbo*
-        ordinary NBO output file (if run by an external NBO package)
-    - *FILENAME.49*
-        extra output required for PIO analysis, containing NAO coefficients, density matrix in NAO basis, and Fock matrix in NAO basis if available; only appear if the above mentioned NBO keywords have been specified properly
+2. Prepare input files and perform PIO analysis
+    Run the following commands in a shell environment.
+    ```
+    formchk CH4.chk CH4.fchk
+    cat CH4.33 CH4.61 CH4.71 > CH4.49
+    python PIO.py CH4.fchk
+    ```
+    These commands do three things:
+    - Convert Gaussian checkpoint file to formcheck file for ease of visualization
+    - Concatenate the NBO output files into one single file. Note that this file MUST have the same filename as the formcheck file so that the PIO program can properly find it.
+    - Do PIO analysis
 
-    A bash script "genpionbos" is attached with the program to automatically modify the keywords in .47 file and then generate the .49 file by calling the NBO program. Note that the PIO program cannot understand an integrated .49 file in the case of open-shell systems. Therefore separate files are generated via "AONAO=W33 FNAO=W61 DMNAO=W71" in the genpionbos script. This is also suggested for users that do not use the genpionbos script.
-
-3. Run PIO analysis
-
-    We now run PIO analysis with the following command. Note that FILENAME.49 must exist with the same name as FILENAME.FChk.
-    
-    **Command:**
-    
-        python PIO.py FILENAME.FChk
-    
-    The program will then request for a fragmentation as input to specify two groups of atoms
-    
-    **Input:**
-    
-        1-5,8,13 6-7,9-12
-    
+    In the last step, the PIO program will then request for a fragmentation as input to specify two groups of atoms with following prompt:
+    `$ Please input the atom ID of two fragments: (e.g. 1-5,8,13 6-7,9-12)`
+    `$ `
     Two groups of atom IDs should be input here separated by a space. Numbers in each group are separated by a comma. Hyphen is supported for sequential numbers. Atom numbering starts from 1. Complete fragmentation is always recommended (i.e. the specified two groups cover all the atoms present in the system). Incomplete fragmentation will lead to absence of mathematical elegance but is still meaningful if you really want to do it.
 
     **Output**
-    - *FILENAME_pio.txt*
+    - *CH4_pio.txt*
         PIO log file, containing basic information of the PIOs of the system subject to the input fragmentation
-    - *FILENAME_pio.FChk*
+    - *CH4_pio.fchk*
         Gaussian FormCheck file containing PIOs labeled as in the txt file, could be visualized by GaussView and other compatable orbital visualization softwares
-    - *FILENAME_pimo.FChk*
+    - *CH4_pimo.fchk*
         A similar Gaussian FormCheck file containing PIMOs whose ordering is same as that of PIOs
-    - *FILENAME_pio.raw* (discarded in latest PIO version)
-        numpy-formatted raw data file for debugging or advanced user
 
-Update at Jan 16, 2020
----
-Principal Interacting Spin Orbital (PISO) analysis now available for spin-polarized systems. The usage is the same as above.
-
-Related publication
+## Related publication
 ---
 Original method of PIO: doi.org/10.1002/chem.201801220
 
@@ -90,18 +87,4 @@ Extension to spin-polarized systems: doi.org/10.1039/D0CP00127A
 
 A recent review on PIO: doi.org/10.1002/wcms.1469
 
-TODO
----
-- [ ] Transplant to python 3
-- [ ] Support on built-in NBO3.0 in Gaussian 
-(You may refer to the following link for temporary use: https://mp.weixin.qq.com/s?__biz=MzU5NDYxNjc5Ng==&mid=2247485938&idx=1&sn=addcb81d6a9caed028a9ab86e336847d&chksm=fe7fc141c9084857858ebeb9988bd73c70fd631f354a53aeb7768fcd4c6df9f890de7539d583&mpshare=1&scene=1&srcid=&sharer_sharetime=1589122912458&sharer_shareid=f14b465eb222f6bb34657e2c0fafe383&key=64daf1adc09d7c6ecdf51441f0e0e0081ff30416a8c76cafc75ab07809a89ccb0e3a0fde164cf3daa101192f723f9349e88e6622f494e3da3870bf9eaebe22bf9583324d7112cf0072a7c78f482c98d9&ascene=1&uin=MTY5ODAzMzEyNQ%3D%3D&devicetype=Windows+10+x64&version=62090070&lang=zh_CN&exportkey=AdPzWFyVBDaa5HawSncSSzA%3D&pass_ticket=CJnCOXQ4GY3GwKDSPl0mmbvH12dznP%2F%2Bj30sXI1%2BLh1L4wzPIu4fEYHNwnZHTc2M)
 
-Disclaimer
----
-Copyright (c) 2018 jxzhangcc and fksheong
-
-All rights reserved.
-
-Redistribution and use in source and binary forms are permitted provided that the above copyright notice and this paragraph are duplicated in all such forms and that any documentation, advertising materials, and other materials related to such distribution and use acknowledge that the software was developed by the author. The name of the authors may not be used to endorse or promote products derived from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
