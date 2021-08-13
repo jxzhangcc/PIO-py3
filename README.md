@@ -57,7 +57,7 @@ Due to the lack of universal interface to NBO program and visualization tools, i
 
         NBO temp file storing NAO Fock matrix
 
-     Notes:
+     **Notes**
      - `FILENAME=CH4` specifies the filename of 33/61/71 files, otherwise the default filenames are FILE.33, etc.`
      - Fock matrix is not always available from Gaussian depending on different calculation objectives, in which case the subsequent procedure should still work except that PIO energies are no longer available in the final output.
      - For users who own and prefer to use NBO 6.0 or newer versions, `pop=nbo6read` can be used to call NBO 6.0 program. Alternatively one might use the NBO keyword `archive` to generate a `FILE.47` file and run external NBO program separately. In the latter case, be reminded to add `AONAO=W33 FNAO=W61 DMNAO=W71` in the NBO keyword line of the 47 file.
