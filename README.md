@@ -2,7 +2,7 @@
 **Principal Interacting Orbital (for python 3)**
 
 ## Requirement
----
+--
 - Python 3
 - Numpy 1.18.5
 - Gaussian 09 or 16
@@ -11,7 +11,7 @@
 This combination has been well tested. Other versions are not guaranteed to work but are welcomed to test.
 
 ## Tutorial
----
+--
 The overall workflow of a PIO analysis consists of three parts:
 - Run ordinary quantum chemistry calculation, i.e. computing the electronic structure of a molecule and optimizing its geometry if necessary
 - Perform natural population analysis (NPA)
@@ -98,7 +98,7 @@ Due to the lack of universal interface to NBO program and visualization tools, i
         A similar Gaussian FormCheck file containing PIMOs whose ordering is same as that of PIOs
 
 ## Related publication
----
+--
 Original method of PIO: doi.org/10.1002/chem.201801220
 
 Extension to spin-polarized systems: doi.org/10.1039/D0CP00127A
