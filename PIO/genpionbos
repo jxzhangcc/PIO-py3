@@ -1,0 +1,15 @@
+#! /bin/bash
+suffix='.47'
+nbopath='PATH_TO_NBO'
+
+for filename in $@; do
+  if [[ $filename == *$suffix ]]
+  then 
+    sed -i -r 's/\$NBO.+\$END/\$NBO AONAO=W33 FNAO=W61 DMNAO=W71 BNDIDX SKIPBO \$END/g' $filename
+    $nbopath/gennbo.fg.sh ${filename}
+    cat ${filename%.*}.33 ${filename%.*}.61 ${filename%.*}.71 > ${filename%.*}.49
+    rm -f ${filename%.*}.33 ${filename%.*}.61 ${filename%.*}.71
+  else
+    echo "$filename is not $suffix file."
+  fi
+done
