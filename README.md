@@ -102,4 +102,36 @@ Extension to spin-polarized systems: doi.org/10.1039/D0CP00127A
 
 A recent review on PIO: doi.org/10.1002/wcms.1469
 
+## Possible issues
+- Assertion error:
+```
+  File "/home/user/softwares/PIO-py3/PIO/parse49.py", line 152, in find_n_from_n_tri
+    assert M == i * (i + 1) // 2
+AssertionError
+```
+This error arises because PIO program has not read enough data from files. One should first check if NBO analysis has normally terminates.
+There are however some rare cases, usually when the basis set is very large (e.g. for large systems or with very diffuse orbitals), in which case the matrix files (33/61/71) are not properly printed with desired format, such as the following case:
+```
+  -136.863913355   -5.050851215  -94.820013190  115.472313795 -269.393527639
+   -26.244735693 -144.731687559  160.791510377   45.250862633-1373.922308535
+```
+In NBO program, the matrix output has a fixed column width which is not enough for numbers beyond 1000. In this case, there will be no space between adjacent matrix elements and consequently PIO program cannot properly identify them as two numbers. To solve this issue, just make up the missing space. The PIO program simply uses space as delimiter so column width is not a concern.
 
+- Key error:
+```
+  File "/home/user/softwares/PIO-py3/PIO/PIO.py", line 48, in PIO
+    naoao = raw['NAOAO']
+KeyError: 'NAOAO'
+```
+This error arises because PIO program didn't find the AO to NAO transformation matrix in the .49 file. Again, one should first check if NBO analysis has normally terminates.
+However, incompatible Gaussian and NBO versions can also lead to this situation. To check if this is the case, open the .33 file and see if the file header is missing:
+```
+# NBO4
+# NAOs in the AO basis:
+# -------------------------------------------------------------------------------
+    -0.032042813    1.024459509    0.022315269    0.001689888   -0.001077316
+    ...
+```
+The lines starting with # should be present in most cases. But based on our tests, NBO3.0 built in G09 will NOT output this header. As NBO program uses this header to recognize which matrix is which, the PIO program cannot proceed.
+
+In this case, you need to manually add back these three lines to the beginning of the .33 file, regenerate .49 file and rerun PIO program.
